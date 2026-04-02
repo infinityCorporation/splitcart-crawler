@@ -1,69 +1,22 @@
 const { chromium } = require('playwright');
 
-const ZIP_CODE = '10001';
+// Import our constants, at some point maybe some of these should go in a database, not rn tho
+const RETAILERS = require('./data/retailers');
+const ITEMS = require('./data/items');
+const ZIP_CODE = require('./data/zipcodes');
 
-const ITEMS = [
-  'large eggs dozen',
-  'whole milk gallon',
-  'white bread loaf',
-  'butter salted',
-  'cheddar cheese',
-];
-
-const RETAILERS = [
-  {
-    name: 'Walmart',
-    url: 'https://www.walmart.com',
-    zipTrigger:  '[data-testid="header-store-finder"]',
-    zipInput:    'input[name="location"]',
-    zipSubmit:   '[data-testid="set-store-submit-btn"]',
-    storeOption: '[data-testid="store-list-item"]:first-child button',
-    searchInput: '#global-search-input',
-    resultTile:  '[data-testid="list-view"]',
-    priceEl:     '[itemprop="price"]',
-    nameEl:      '[data-testid="product-title"]',
-  },
-  {
-    name: 'Aldi',
-    url: 'https://www.aldi.us',
-    zipTrigger:  '[data-testid="storeFinderLink"]',
-    zipInput:    '#location-search',
-    zipSubmit:   'button[type="submit"]',
-    storeOption: '.store-list__item:first-child .store-list__select-btn',
-    searchInput: '#search-input',
-    resultTile:  '.product-tile',
-    priceEl:     '.product-tile__price',
-    nameEl:      '.product-tile__name',
-  },
-  {
-    name: 'Target',
-    url: 'https://www.target.com',
-    zipTrigger:  '[data-test="@web/StoreFinderButton"]',
-    zipInput:    'input[data-test="store-finder-input"]',
-    zipSubmit:   'button[data-test="store-search-submit"]',
-    storeOption: '[data-test="store-card-select-store"]:first-of-type',
-    searchInput: '[data-test="@web/Search/SearchInput"]',
-    resultTile:  '[data-test="product-details"]',
-    priceEl:     '[data-test="product-price"]',
-    nameEl:      '[data-test="product-title"]',
-  },
-];
-
-// ─────────────────────────────────────────────
-//  Entry point
-// ─────────────────────────────────────────────
 async function crawl() {
   const browser = await chromium.launch({ headless: true });
 
+  // loop through the retailers
   for (const retailer of RETAILERS) {
     const page = await browser.newPage();
 
-    console.log(`\n========== ${retailer.name} ==========`);
+    console.log(`Crawling - ${retailer.name}`);
 
-    // 1. Navigate to site
     await page.goto(retailer.url, { waitUntil: 'domcontentloaded' });
 
-    // 2. Enter ZIP code and select nearest store
+    // Things start to get complicated here - need to get the triggers for each store's website, start with Aldi
     await page.waitForSelector(retailer.zipTrigger);
     await page.click(retailer.zipTrigger);
     await page.waitForSelector(retailer.zipInput);
@@ -88,6 +41,7 @@ async function crawl() {
       let cheapestPrice = Infinity;
       let cheapestName  = null;
 
+      // Do your very best to attempt to parse the tile, most likely not successful tho
       for (const tile of tiles) {
         const nameEl  = await tile.$(retailer.nameEl);
         const priceEl = await tile.$(retailer.priceEl);
@@ -103,22 +57,16 @@ async function crawl() {
         }
       }
 
-      // Log result
-      if (cheapestName) {
-        console.log(`  ${item.padEnd(22)} $${cheapestPrice.toFixed(2)}  →  ${cheapestName}`);
-      } else {
-        console.log(`  ${item.padEnd(22)} no results`);
-      }
+      // At a later date this result spot will be where we are saving things to the database, that is for a later date though
+      if (cheapestName) console.log(`  ${item.padEnd(22)} $${cheapestPrice.toFixed(2)}  →  ${cheapestName}`);
+      else console.log(`  ${item.padEnd(22)} no results`);
     }
 
-    // 4. Exit site and close page
     await page.close();
-    console.log(`  [${retailer.name} done]`);
   }
 
-  // 5. Close crawler gracefully
+  // don't forget to close the browser or bad things happen
   await browser.close();
-  console.log('\nAll done. Browser closed.');
 }
 
 crawl().catch(err => {
