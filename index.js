@@ -1,5 +1,3 @@
-'use strict';
-
 const { chromium } = require('playwright');
 
 const ZIP_CODE = '10001';
