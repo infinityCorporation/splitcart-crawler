@@ -1,0 +1,14 @@
+{
+  "name": "splitcart-crawler",
+  "version": "1.0.0",
+  "description": "This is the crawler used to get prices from retailers nationwide. The prices are then stored locally for use on the frontend splitcart website",
+  "main": "index.js",
+  "scripts": {
+    "run": "node index.js"
+  },
+  "author": "Evan Frisbie",
+  "license": "ISC",
+  "dependencies": {
+    "playwright": "^1.59.1"
+  }
+}
